@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+import csv
 
 URL = "https://www.kivano.kg/noutbuki"
 HEADERS = {
@@ -8,13 +9,13 @@ HEADERS = {
 }
 
 LINK = "https://www.kivano.kg"
-
+CSV_FILE = "laptop.csv"
 
 def get_html(url, headers):
     response = requests.get(url, headers=headers)
     return response
 
-def get_content_from_html(html_text):
+def get_content_from_html(html_text) -> list:
     soup = BeautifulSoup(html_text, "html.parser")
     items = soup.find_all("div", class_= "item product_listbox oh")
     laptops = []
@@ -22,16 +23,26 @@ def get_content_from_html(html_text):
         laptops.append(
             {
                 "title": item.find("div", class_="listbox_title oh").get_text().replace("\n", ""),
-                "description": item.find("div", class_="product_text pull-left").get_text().replace("\n", ""),
+                "description": item.find("div", class_="product_text pull-left").get_text(strip=True).replace("\n", ""),
                 "price": item.find("div", class_="listbox_price text-center").get_text().replace("\n", ""),
                 "image": LINK + item.find("img").get("src"),
             }
         )
-    print(laptops)
+    return laptops
+
+def save_data(laptops: list) -> None:
+    with open(CSV_FILE, "w") as file:
+        writer = csv.writer(file, delimiter=",")
+        writer.writerow(["Название", "Описание", "Цена", "Картинка"])
+        for laptop in laptops:
+            writer.writerow([laptop["title"],laptop["description"], laptop["price"], laptop["image"]])
 
 def get_result_parse():
     html = get_html(URL, HEADERS)
     if html.status_code == 200:
-        get_content_from_html(html.text)
+        laptops = get_content_from_html(html.text)
+        save_data(laptops)
+        return laptops
 
-get_result_parse()
+print(get_result_parse())
+
